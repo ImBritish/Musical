@@ -15,7 +15,7 @@ A [BakkesMod](https://bakkesmod.com/) plugin that displays the currently playing
 ## 📦 Installation
 
 1. Open the Plugin-Manager in Plugins tab in BakkesMod
-2. Enter the ID [ID]
+2. Enter the ID: 574
 3. Press the button "Install By ID"
 4. Enjoy the plugin!
 
@@ -40,5 +40,5 @@ Controls are displayed when the main BakkesMod Gui is showing.
 
 ## 🔗 Credits
 
-Made with ❤️ by [Mediacy]  
+Made with ❤️ by Mediacy
 Powered by ImGui and the BakkesMod SDK
