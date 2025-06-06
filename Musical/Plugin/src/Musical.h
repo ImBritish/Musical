@@ -32,8 +32,11 @@ private:
 	void PreviousSong() const;
 	void RestartSong() const;
 
+	void RegisterCommands();
+
 	void FetchMediaMeta();
 private:
 	std::string CurrentTitle = "Not Playing", CurrentArtist = "None";
 	bool MediaPlayling = false;
+	bool DisplayOverlay = true;
 };

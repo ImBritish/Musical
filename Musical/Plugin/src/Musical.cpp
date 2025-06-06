@@ -2,6 +2,8 @@
 #include "Musical.h"
 
 #include <Windows.h>
+#include <chrono>
+#include <algorithm>
 
 BAKKESMOD_PLUGIN(Musical, "Musical", plugin_version, PLUGINTYPE_FREEPLAY)
 
@@ -10,6 +12,10 @@ std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
 void Musical::onLoad()
 {
 	_globalCvarManager = cvarManager;
+
+    this->RegisterCommands();
+
+    this->FetchMediaMeta();
 
 	gameWrapper->RegisterDrawable([this](CanvasWrapper canvas) 
 		{
@@ -25,34 +31,79 @@ void Musical::onUnload()
 
 void Musical::RenderSettings()
 {
-    ImGui::Begin("Spotify Controls");
-
-    this->FetchMediaMeta();
-
-    ImGui::Text("Now Playing: %s", this->CurrentTitle.c_str());
-    ImGui::Text("Artist: %s", this->CurrentArtist.c_str());
-
-    if (ImGui::Button("Previous")) this->PreviousSong();
-
-    ImGui::SameLine();
-    if (ImGui::Button(this->MediaPlayling ? "Pause" : "Play")) PlayPause();
-
-    ImGui::SameLine();
-    if (ImGui::Button("Next")) this->NextSong();
-
-    if (ImGui::Button("Restart")) this->RestartSong();
-
-    ImGui::End();
+    if (ImGui::Checkbox("Show Overlay", &this->DisplayOverlay))
+    {
+        gameWrapper->Execute([this](GameWrapper* gw) 
+            {
+                cvarManager->executeCommand("togglemenu " + GetMenuName());
+            }
+        );
+    }
 }
 
 void Musical::RenderWindow()
 {
+    if (!DisplayOverlay || !isWindowOpen_ || !gameWrapper)
+        return;
 
+    bool ShowControls = gameWrapper->IsCursorVisible() == 2;
+    
+    float titleSizeX = ImGui::CalcTextSize(std::string(("Now Playing: ") + CurrentTitle).c_str()).x;
+    float artistSizeX = ImGui::CalcTextSize(std::string(("Artist: ") + CurrentArtist).c_str()).x;
+    
+    float trueSizeX = (titleSizeX >= artistSizeX ? titleSizeX : artistSizeX) + 20;
+    
+    if (trueSizeX < 175)
+        trueSizeX = 175;
+    
+    ImGui::SetWindowSize({ trueSizeX, (float) (ShowControls ? 70 : 50) });
+
+    ImGui::Text("Now Playing: %s", this->CurrentTitle.c_str());
+    ImGui::Text("Artist: %s", this->CurrentArtist.c_str());
+
+    if (ShowControls)
+    {
+        ImGui::SetNextWindowSize({ 400, 100 });
+
+        if (ImGui::Button("Previous"))
+        {
+            this->PreviousSong();
+            this->FetchMediaMeta();
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button(this->MediaPlayling ? "Pause" : "Play"))
+        {
+            this->PlayPause();
+            this->FetchMediaMeta();
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button("Next"))
+        {
+            this->NextSong();
+            this->FetchMediaMeta();
+        }
+    }
 }
 
 void Musical::RenderCanvas(CanvasWrapper& canvas)
 {
+    static auto lastTime = std::chrono::high_resolution_clock::now();
+    auto now = std::chrono::high_resolution_clock::now();
 
+    auto duration = duration_cast<std::chrono::milliseconds>(now - lastTime).count();
+
+    if (duration >= 1000)
+    {
+        this->FetchMediaMeta();
+        lastTime = now;
+    }
+
+    if (!isWindowOpen_ && DisplayOverlay)
+        cvarManager->executeCommand("togglemenu " + GetMenuName());
 }
 
 void Musical::PlayPause() const
@@ -70,7 +121,7 @@ void Musical::PreviousSong() const
 	keybd_event(VK_MEDIA_PREV_TRACK, 0, KEYEVENTF_EXTENDEDKEY, 0);
 }
 
-void Musical::RestartSong() const
+void Musical::RestartSong() const // Not in use / dont work lol
 {
 	PreviousSong();
 
@@ -79,6 +130,30 @@ void Musical::RestartSong() const
 			this->PreviousSong();
 		}, 
 	0.1f); // 100ms
+}
+
+void Musical::RegisterCommands()
+{
+    cvarManager->registerNotifier("musical_next", [this](std::vector<std::string> args) 
+        {
+            this->NextSong();
+            this->FetchMediaMeta();
+        }
+    , "Play next song in queue", PERMISSION_ALL);
+
+    cvarManager->registerNotifier("musical_prev", [this](std::vector<std::string> args)
+        {
+            this->PreviousSong();
+            this->FetchMediaMeta();
+        }
+    , "Play previous song", PERMISSION_ALL);
+
+    cvarManager->registerNotifier("musical_pause_play", [this](std::vector<std::string> args)
+        {
+            this->PlayPause();
+            this->FetchMediaMeta();
+        }
+    , "Play/Pause current song", PERMISSION_ALL);
 }
 
 void Musical::FetchMediaMeta()

@@ -13,10 +13,8 @@ class PluginWindowBase : public BakkesMod::Plugin::PluginWindow
 {
 public:
 	virtual ~PluginWindowBase() = default;
-
 	bool isWindowOpen_ = false;
 	std::string menuTitle_ = "Musical";
-
 	std::string GetMenuName() override;
 	std::string GetMenuTitle() override;
 	void SetImGuiContext(uintptr_t ctx) override;
