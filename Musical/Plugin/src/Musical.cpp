@@ -102,7 +102,10 @@ void Musical::RenderCanvas(CanvasWrapper& canvas)
         lastTime = now;
     }
 
-    if (!isWindowOpen_ && DisplayOverlay)
+    if (isWindowOpen_ && !gameWrapper->IsInGame())
+        cvarManager->executeCommand("togglemenu " + GetMenuName());
+
+    if (!isWindowOpen_ && DisplayOverlay && gameWrapper->IsInGame())
         cvarManager->executeCommand("togglemenu " + GetMenuName());
 }
 
